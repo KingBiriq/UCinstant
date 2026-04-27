@@ -1,0 +1,186 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft, Save, UploadCloud } from "lucide-react";
+
+export default function NewBannerPage() {
+    const router = useRouter();
+    const [loading, setLoading] = useState(false);
+
+    const [form, setForm] = useState({
+        name: "", // Title
+        game_code: "linear-gradient(to right, #3b82f6, #8b5cf6)", // Background Color
+        image: "", // Background Image
+        subtitle: "",
+        link: "",
+        sort_order: 0,
+        active: true,
+    });
+
+    const colors = [
+        "linear-gradient(to right, #8b5cf6, #ec4899)",
+        "linear-gradient(to right, #f97316, #facc15)",
+        "linear-gradient(to right, #0ea5e9, #38bdf8)",
+        "linear-gradient(to right, #10b981, #34d399)",
+        "linear-gradient(to right, #f43f5e, #fb7185)",
+        "linear-gradient(to right, #3b82f6, #60a5fa)",
+        "#ec4899",
+        "#1f2937",
+    ];
+
+    async function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        setLoading(true);
+
+        const payload = {
+            name: form.name,
+            slug: `banner-${Date.now()}`,
+            game_code: form.game_code,
+            image: form.image,
+            type: "api",
+            sort_order: form.sort_order,
+            active: form.active,
+            description: JSON.stringify({
+                is_banner: true,
+                subtitle: form.subtitle,
+                link: form.link
+            })
+        };
+
+        const res = await fetch("/api/admin/categories", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+
+        const data = await res.json();
+        setLoading(false);
+
+        if (data.success) {
+            router.push("/admin/landing?tab=banners");
+        } else {
+            alert(data.message || "Failed to create banner");
+        }
+    }
+
+    return (
+        <div className="max-w-3xl mx-auto animate-[slideUp_.3s_ease-out]">
+            <Link href="/admin/landing?tab=banners" className="inline-flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-[#1a2b4b] mb-6 transition">
+                <ArrowLeft size={16} /> Back to Banners
+            </Link>
+
+            <div className="mb-6">
+                <h1 className="text-[28px] font-black tracking-tight text-[#1a2b4b]">New Banner</h1>
+                <p className="text-sm font-bold text-gray-400 mt-1">Configure the slider banner with image, text and styling</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 space-y-6">
+                
+                {/* Background Image */}
+                <div>
+                    <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-2">Background Image (Optional)</label>
+                    <div className="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:bg-gray-50 transition">
+                        <input
+                            type="text"
+                            placeholder="Enter image URL (e.g. https://...)"
+                            className="w-full bg-transparent border-none outline-none text-center font-bold text-sm"
+                            value={form.image}
+                            onChange={(e) => setForm({ ...form, image: e.target.value })}
+                        />
+                        {!form.image && (
+                            <div className="pointer-events-none mt-2 flex flex-col items-center text-gray-400">
+                                <UploadCloud size={24} className="mb-2" />
+                                <span className="text-xs font-bold">Or paste an image URL above</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Background Colors */}
+                <div>
+                    <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-2">Background Color</label>
+                    <div className="flex flex-wrap gap-3">
+                        {colors.map(c => (
+                            <button
+                                key={c}
+                                type="button"
+                                onClick={() => setForm({ ...form, game_code: c })}
+                                className={`w-12 h-12 rounded-xl border-2 transition-transform ${form.game_code === c ? 'border-gray-800 scale-110' : 'border-transparent hover:scale-105'}`}
+                                style={{ background: c }}
+                            />
+                        ))}
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-2">Title</label>
+                        <input
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-[#1a2b4b] focus:bg-white focus:border-purple-500 outline-none transition-all"
+                            placeholder="e.g. Diamonds & UC"
+                            required
+                            value={form.name}
+                            onChange={(e) => setForm({ ...form, name: e.target.value })}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-2">Subtitle</label>
+                        <input
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-[#1a2b4b] focus:bg-white focus:border-purple-500 outline-none transition-all"
+                            placeholder="e.g. Sida Ugu Dhaqsiyaha Badan"
+                            value={form.subtitle}
+                            onChange={(e) => setForm({ ...form, subtitle: e.target.value })}
+                        />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-2">Link URL</label>
+                        <input
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-[#1a2b4b] focus:bg-white focus:border-purple-500 outline-none transition-all"
+                            placeholder="https://..."
+                            value={form.link}
+                            onChange={(e) => setForm({ ...form, link: e.target.value })}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-2">Sort Order</label>
+                        <input
+                            type="number"
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-[#1a2b4b] focus:bg-white focus:border-purple-500 outline-none transition-all"
+                            value={form.sort_order}
+                            onChange={(e) => setForm({ ...form, sort_order: parseInt(e.target.value) || 0 })}
+                        />
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                    <div>
+                        <div className="font-bold text-[#1a2b4b] text-sm">Active</div>
+                        <div className="text-xs text-gray-500">Show this banner in the public slider</div>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                        <input 
+                            type="checkbox" 
+                            className="sr-only peer"
+                            checked={form.active}
+                            onChange={(e) => setForm({ ...form, active: e.target.checked })}
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#8b5cf6]"></div>
+                    </label>
+                </div>
+
+                <button
+                    disabled={loading}
+                    type="submit"
+                    className="w-full bg-[#8b5cf6] hover:bg-[#7c3aed] text-white py-4 rounded-xl font-black flex items-center justify-center gap-2 transition-all shadow-lg shadow-purple-500/25 active:scale-[0.98] disabled:opacity-50"
+                >
+                    <Save size={18} /> {loading ? "Creating..." : "Create Banner"}
+                </button>
+            </form>
+        </div>
+    );
+}

@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+body{background:#f4f7fa;color:#111827}
+.glass{background:rgba(255,255,255,.9);border:1px solid rgba(0,0,0,.05);backdrop-filter:blur(18px)}
+.input{@apply w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-blue-500}
+.btn{@apply rounded-2xl bg-biriq-gold px-5 py-3 font-black text-black transition hover:scale-[1.02]}
+.btn-dark{@apply rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-bold text-white transition hover:bg-white/10}
+.badge{@apply rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold text-white/80}

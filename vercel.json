@@ -1,0 +1,1 @@
+{"crons":[{"path":"/api/cron/sync-prices?secret=YOUR_CRON_SECRET","schedule":"*/5 * * * *"}]}
