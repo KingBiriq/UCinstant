@@ -3,32 +3,39 @@ import { randomUUID } from "crypto";
 import { supabaseAdmin } from "@/lib/supabase";
 import { g2bulk } from "@/lib/g2bulk";
 
-function isDeliverySuccess(api: any) {
-    const status = String(api?.status || api?.order?.status || "").toUpperCase();
-
-    if (api?.success === true) return true;
-    if (status.includes("SUCCESS")) return true;
-    if (status.includes("COMPLETED")) return true;
-    if (status.includes("PROCESSING")) return true;
-
-    return false;
-}
-
 async function awardCashback(orderId: string) {
-    const siteUrl =
-        process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
     try {
         await fetch(`${siteUrl}/api/cashback/award`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ order_id: orderId }),
         });
     } catch (error) {
         console.error("Cashback award failed:", error);
     }
+}
+
+function getFinalDeliveryStatus(api: any) {
+    const rawStatus = String(
+        api?.status ||
+        api?.order?.status ||
+        api?.data?.status ||
+        api?.message ||
+        ""
+    ).toUpperCase();
+
+    if (
+        rawStatus.includes("FAILED") ||
+        rawStatus.includes("ERROR") ||
+        rawStatus.includes("INSUFFICIENT") ||
+        api?.success === false
+    ) {
+        return "FAILED";
+    }
+
+    return "COMPLETED";
 }
 
 export async function POST(req: Request) {
@@ -70,13 +77,13 @@ export async function POST(req: Request) {
         if (product?.product_type !== "api") {
             await s
                 .from("orders")
-                .update({
-                    delivery_status: "MANUAL_REQUIRED",
-                })
+                .update({ delivery_status: "MANUAL_REQUIRED" })
                 .eq("id", order.id);
 
             return NextResponse.json({
                 success: true,
+                order_id: order.id,
+                delivery_status: "MANUAL_REQUIRED",
                 message: "Manual order requires admin delivery",
             });
         }
@@ -96,11 +103,7 @@ export async function POST(req: Request) {
             }),
         });
 
-        const deliverySuccess = isDeliverySuccess(api);
-
-        const deliveryStatus = deliverySuccess
-            ? api?.status || api?.order?.status || "PROCESSING"
-            : "FAILED";
+        const deliveryStatus = getFinalDeliveryStatus(api);
 
         await s
             .from("orders")
@@ -111,12 +114,12 @@ export async function POST(req: Request) {
             })
             .eq("id", order.id);
 
-        if (deliverySuccess) {
+        if (deliveryStatus === "COMPLETED") {
             await awardCashback(order.id);
         }
 
         return NextResponse.json({
-            success: deliverySuccess,
+            success: deliveryStatus === "COMPLETED",
             order_id: order.id,
             delivery_status: deliveryStatus,
             api_response: api,

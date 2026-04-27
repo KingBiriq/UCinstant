@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Save, UploadCloud } from "lucide-react";
+import ImageUpload from "@/components/ImageUpload";
 
 export default function NewBannerPage() {
     const router = useRouter();
@@ -79,24 +80,11 @@ export default function NewBannerPage() {
             <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 space-y-6">
                 
                 {/* Background Image */}
-                <div>
-                    <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-2">Background Image (Optional)</label>
-                    <div className="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:bg-gray-50 transition">
-                        <input
-                            type="text"
-                            placeholder="Enter image URL (e.g. https://...)"
-                            className="w-full bg-transparent border-none outline-none text-center font-bold text-sm"
-                            value={form.image}
-                            onChange={(e) => setForm({ ...form, image: e.target.value })}
-                        />
-                        {!form.image && (
-                            <div className="pointer-events-none mt-2 flex flex-col items-center text-gray-400">
-                                <UploadCloud size={24} className="mb-2" />
-                                <span className="text-xs font-bold">Or paste an image URL above</span>
-                            </div>
-                        )}
-                    </div>
-                </div>
+                <ImageUpload
+                    label="Background Image (Optional)"
+                    value={form.image}
+                    onChange={(url) => setForm({ ...form, image: url })}
+                />
 
                 {/* Background Colors */}
                 <div>

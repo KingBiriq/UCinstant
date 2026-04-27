@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import ImageUpload from "@/components/ImageUpload";
 
 export default function Page() {
     const [form, setForm] = useState({
@@ -8,6 +9,7 @@ export default function Page() {
         slug: "",
         game_code: "",
         image: "",
+        banner_image: "",
         description: "",
         type: "api",
     });
@@ -20,10 +22,12 @@ export default function Page() {
 
         const payload = {
             ...form,
-            // Pack banner and description into the existing description field as JSON to avoid database migration
+            // If it's a partner, we use 'manual' type to avoid database check constraint errors
+            type: form.type === "partner" ? "manual" : form.type,
             description: JSON.stringify({
                 text: form.description,
-                banner_image: form.banner_image
+                banner_image: form.banner_image,
+                is_partner: form.type === "partner"
             })
         };
 
@@ -81,25 +85,17 @@ export default function Page() {
                     />
                 </div>
 
-                <div>
-                    <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-2">Category Icon URL</label>
-                    <input
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-[#1a2b4b] focus:bg-white focus:border-purple-500 outline-none transition-all"
-                        placeholder="Square icon URL (e.g. logo.png)"
-                        value={form.image}
-                        onChange={(e) => setForm({ ...form, image: e.target.value })}
-                    />
-                </div>
+                <ImageUpload
+                    label="Category Icon (Square)"
+                    value={form.image}
+                    onChange={(url) => setForm({ ...form, image: url })}
+                />
 
-                <div>
-                    <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-2">Banner Image URL</label>
-                    <input
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-[#1a2b4b] focus:bg-white focus:border-purple-500 outline-none transition-all"
-                        placeholder="Wide banner URL (e.g. banner.png)"
-                        value={form.banner_image || ""}
-                        onChange={(e) => setForm({ ...form, banner_image: e.target.value })}
-                    />
-                </div>
+                <ImageUpload
+                    label="Banner Image (Wide)"
+                    value={form.banner_image}
+                    onChange={(url) => setForm({ ...form, banner_image: url })}
+                />
 
                 <div>
                     <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-2">Subtitle / Description</label>
@@ -120,6 +116,7 @@ export default function Page() {
                     >
                         <option value="api">API Category</option>
                         <option value="manual">Manual Category</option>
+                        <option value="partner">Payment Partner</option>
                     </select>
                 </div>
 

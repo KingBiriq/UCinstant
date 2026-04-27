@@ -3,8 +3,9 @@ import { supabaseAdmin } from "@/lib/supabase";
 import DeleteButton from "@/components/DeleteButton";
 import { Plus, Edit2, Trash2 } from "lucide-react";
 
-export default async function LandingManagerPage({ searchParams }: { searchParams: { tab?: string } }) {
-    const tab = searchParams.tab || "categories";
+export default async function LandingManagerPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+    const resolvedParams = await searchParams;
+    const tab = resolvedParams.tab || "categories";
     const s = supabaseAdmin();
 
     const { data } = await s

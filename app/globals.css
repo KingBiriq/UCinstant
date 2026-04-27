@@ -1,7 +1,18 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-body{background:#f4f7fa;color:#111827}
+
+:root {
+  --background: #f4f7fa;
+  --foreground: #1a2b4b;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), sans-serif;
+}
+
 .glass{background:rgba(255,255,255,.9);border:1px solid rgba(0,0,0,.05);backdrop-filter:blur(18px)}
 .input{@apply w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-blue-500}
 .btn{@apply rounded-2xl bg-biriq-gold px-5 py-3 font-black text-black transition hover:scale-[1.02]}

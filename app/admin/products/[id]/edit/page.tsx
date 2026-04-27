@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase";
+import ImageUpload from "@/components/ImageUpload";
 
 export default function Page() {
     const params = useParams();
@@ -214,15 +215,11 @@ export default function Page() {
                     />
                 </div>
 
-                <div>
-                    <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-2">Image URL</label>
-                    <input
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-[#1a2b4b] focus:bg-white focus:border-purple-500 outline-none transition-all"
-                        placeholder="https://..."
-                        value={form.image}
-                        onChange={(e) => setForm({ ...form, image: e.target.value })}
-                    />
-                </div>
+                <ImageUpload
+                    label="Product Image (Optional)"
+                    value={form.image}
+                    onChange={(url) => setForm({ ...form, image: url })}
+                />
 
                 <div>
                     <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-2">Description</label>

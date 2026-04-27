@@ -13,14 +13,15 @@ function calculateProfit(apiPrice: number, sellPrice: number) {
 
 export async function GET(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params;
         const s = supabaseAdmin();
         const { data, error } = await s
             .from("products")
             .select("*")
-            .eq("id", params.id)
+            .eq("id", id)
             .single();
 
         if (error) {
@@ -41,9 +42,10 @@ export async function GET(
 
 export async function PUT(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params;
         const s = supabaseAdmin();
         const body = await req.json();
 
@@ -67,7 +69,7 @@ export async function PUT(
                 profit,
                 active: body.active ?? true,
             })
-            .eq("id", params.id)
+            .eq("id", id)
             .select("*")
             .single();
 
@@ -95,15 +97,16 @@ export async function PUT(
 
 export async function DELETE(
     _: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params;
         const s = supabaseAdmin();
 
         const { error } = await s
             .from("products")
             .delete()
-            .eq("id", params.id);
+            .eq("id", id);
 
         if (error) {
             return NextResponse.json(

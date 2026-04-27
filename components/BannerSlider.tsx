@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 
 export default function BannerSlider({ banners }: { banners: any[] }) {
     const [current, setCurrent] = useState(0);
@@ -46,7 +45,6 @@ export default function BannerSlider({ banners }: { banners: any[] }) {
                         className={`absolute inset-0 transition-opacity duration-1000 bg-cover bg-center ${i === current ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}
                         style={b.image ? { backgroundImage: `url(${b.image})` } : { background: bg_color }}
                     >
-                        {/* Overlay only if image exists */}
                         {b.image && <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />}
                         
                         <div className="absolute inset-0 p-6 md:p-10 flex flex-col justify-end">

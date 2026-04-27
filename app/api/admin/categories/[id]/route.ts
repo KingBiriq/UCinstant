@@ -3,14 +3,15 @@ import { supabaseAdmin } from "@/lib/supabase";
 
 export async function GET(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params;
         const s = supabaseAdmin();
         const { data, error } = await s
             .from("categories")
             .select("*")
-            .eq("id", params.id)
+            .eq("id", id)
             .single();
 
         if (error) {
@@ -31,14 +32,15 @@ export async function GET(
 
 export async function DELETE(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params;
         const s = supabaseAdmin();
         const { error } = await s
             .from("categories")
             .delete()
-            .eq("id", params.id);
+            .eq("id", id);
 
         if (error) {
             return NextResponse.json(
@@ -58,9 +60,10 @@ export async function DELETE(
 
 export async function PUT(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params;
         const body = await req.json();
         const s = supabaseAdmin();
 
@@ -75,7 +78,7 @@ export async function PUT(
                 type: body.type,
                 active: body.active,
             })
-            .eq("id", params.id)
+            .eq("id", id)
             .select("*")
             .single();
 

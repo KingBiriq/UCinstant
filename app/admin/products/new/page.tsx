@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase";
+import ImageUpload from "@/components/ImageUpload";
 
 export default function Page() {
     const [cats, setCats] = useState<any[]>([]);
@@ -24,17 +25,11 @@ export default function Page() {
     useEffect(() => {
         async function loadCategories() {
             const s = supabaseBrowser();
-
-            const { data, error } = await s
+            const { data } = await s
                 .from("categories")
                 .select("*")
                 .eq("active", true)
                 .order("name");
-
-            if (error) {
-                alert(error.message);
-                return;
-            }
 
             setCats(data || []);
         }
@@ -58,10 +53,8 @@ export default function Page() {
 
         if (selected?.type === "api" && selected?.game_code) {
             setLoading(true);
-
             const res = await fetch(`/api/g2bulk/catalogue/${selected.game_code}`);
             const data = await res.json();
-
             setApiProducts(data.products || []);
             setLoading(false);
         } else {
@@ -86,55 +79,44 @@ export default function Page() {
     }
 
     async function save() {
-        if (!form.category_id) {
-            alert("Fadlan dooro category.");
-            return;
-        }
-
-        if (!form.title) {
-            alert("Fadlan geli title.");
-            return;
-        }
-
+        if (!form.category_id) return alert("Fadlan dooro category.");
+        if (!form.title) return alert("Fadlan geli title.");
         if (!form.sell_price || Number(form.sell_price) <= 0) {
-            alert("Fadlan geli sell price sax ah.");
-            return;
+            return alert("Fadlan geli sell price sax ah.");
         }
 
         setLoading(true);
 
         const res = await fetch("/api/admin/products", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(form),
         });
 
         const data = await res.json();
         setLoading(false);
 
-        if (!data.success) {
-            alert(data.message || "Product save failed");
-            return;
-        }
+        if (!data.success) return alert(data.message || "Product save failed");
 
         alert("Product added!");
         window.location.href = "/admin/products";
     }
 
-    const profit =
-        Number(form.sell_price || 0) - Number(form.api_price || 0);
+    const profit = Number(form.sell_price || 0) - Number(form.api_price || 0);
 
     return (
-        <div className="animate-[slideUp_.3s_ease-out] max-w-4xl mx-auto">
-            <h1 className="text-[28px] font-black tracking-tight text-[#1a2b4b] mb-8">Add Product</h1>
+        <div className="mx-auto max-w-4xl">
+            <h1 className="mb-8 text-[28px] font-black text-[#1a2b4b]">
+                Add Product
+            </h1>
 
-            <div className="bg-white rounded-[1.5rem] shadow-sm border border-gray-50 p-8 space-y-6">
+            <div className="space-y-6 rounded-[1.5rem] border border-gray-50 bg-white p-8 shadow-sm">
                 <div>
-                    <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-2">Category</label>
+                    <label className="mb-2 block text-xs font-black uppercase text-gray-400">
+                        Category
+                    </label>
                     <select
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-[#1a2b4b] focus:bg-white focus:border-purple-500 outline-none transition-all"
+                        className="input"
                         value={form.category_id}
                         onChange={(e) => chooseCategory(e.target.value)}
                     >
@@ -149,9 +131,11 @@ export default function Page() {
 
                 {apiProducts.length > 0 && (
                     <div>
-                        <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-2">API Product (G2Bulk)</label>
+                        <label className="mb-2 block text-xs font-black uppercase text-gray-400">
+                            API Product
+                        </label>
                         <select
-                            className="w-full bg-purple-50 border border-purple-100 rounded-xl px-4 py-3 text-sm font-bold text-purple-900 focus:bg-white focus:border-purple-500 outline-none transition-all"
+                            className="input"
                             value={form.catalogue_id}
                             onChange={(e) => chooseApiProduct(e.target.value)}
                         >
@@ -166,82 +150,63 @@ export default function Page() {
                 )}
 
                 <div>
-                    <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-2">Product Title</label>
+                    <label className="mb-2 block text-xs font-black uppercase text-gray-400">
+                        Product Title
+                    </label>
                     <input
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-[#1a2b4b] focus:bg-white focus:border-purple-500 outline-none transition-all"
+                        className="input"
                         placeholder="e.g. 60 UC"
                         value={form.title}
                         onChange={(e) => setForm({ ...form, title: e.target.value })}
                     />
                 </div>
 
-                <div>
-                    <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-2">Image URL</label>
-                    <input
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-[#1a2b4b] focus:bg-white focus:border-purple-500 outline-none transition-all"
-                        placeholder="https://..."
-                        value={form.image}
-                        onChange={(e) => setForm({ ...form, image: e.target.value })}
-                    />
-                </div>
+                <ImageUpload
+                    label="Product Image (Optional)"
+                    value={form.image}
+                    onChange={(url) => setForm({ ...form, image: url })}
+                />
 
                 <div>
-                    <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-2">Description</label>
+                    <label className="mb-2 block text-xs font-black uppercase text-gray-400">
+                        Description
+                    </label>
                     <textarea
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold text-[#1a2b4b] focus:bg-white focus:border-purple-500 outline-none transition-all min-h-24 resize-y"
-                        placeholder="Optional description"
+                        className="input min-h-24"
                         value={form.description}
                         onChange={(e) => setForm({ ...form, description: e.target.value })}
                     />
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-3">
-                    <div>
-                        <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-2">Buy Price (API)</label>
-                        <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">$</span>
-                            <input
-                                className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-8 pr-4 py-3 text-sm font-bold text-gray-500 focus:bg-white focus:border-purple-500 outline-none transition-all"
-                                type="number"
-                                placeholder="0.00"
-                                value={form.api_price}
-                                onChange={(e) => setForm({ ...form, api_price: Number(e.target.value) })}
-                            />
-                        </div>
-                    </div>
+                    <input
+                        className="input"
+                        type="number"
+                        placeholder="API Price"
+                        value={form.api_price}
+                        onChange={(e) =>
+                            setForm({ ...form, api_price: Number(e.target.value) })
+                        }
+                    />
 
-                    <div>
-                        <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-2">Sell Price</label>
-                        <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#1a2b4b] font-bold">$</span>
-                            <input
-                                className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-8 pr-4 py-3 text-sm font-black text-[#1a2b4b] focus:bg-white focus:border-purple-500 outline-none transition-all"
-                                type="number"
-                                placeholder="0.00"
-                                value={form.sell_price}
-                                onChange={(e) => setForm({ ...form, sell_price: Number(e.target.value) })}
-                            />
-                        </div>
-                    </div>
+                    <input
+                        className="input"
+                        type="number"
+                        placeholder="Sell Price"
+                        value={form.sell_price}
+                        onChange={(e) =>
+                            setForm({ ...form, sell_price: Number(e.target.value) })
+                        }
+                    />
 
-                    <div>
-                        <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-2">Profit</label>
-                        <div className={`w-full border rounded-xl px-4 py-3 text-sm font-black flex items-center justify-between ${profit >= 0 ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-red-50 border-red-100 text-red-600'}`}>
-                            <span>Net Profit</span>
-                            <span>${profit.toFixed(2)}</span>
-                        </div>
+                    <div className="rounded-xl bg-emerald-50 px-4 py-3 font-black text-emerald-600">
+                        Profit ${profit.toFixed(2)}
                     </div>
                 </div>
 
-                <div className="pt-4 border-t border-gray-50">
-                    <button
-                        onClick={save}
-                        disabled={loading}
-                        className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-xl py-3.5 font-black tracking-wide text-sm shadow-md shadow-purple-600/20 transition-all"
-                    >
-                        {loading ? "Saving..." : "Save Product"}
-                    </button>
-                </div>
+                <button onClick={save} disabled={loading} className="btn w-full">
+                    {loading ? "Saving..." : "Save Product"}
+                </button>
             </div>
         </div>
     );

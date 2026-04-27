@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
+        const { id } = await params;
         const body = await req.json();
         const s = supabaseAdmin();
 
         const { data, error } = await s
             .from("orders")
             .update(body)
-            .eq("id", params.id)
+            .eq("id", id)
             .select("*")
             .single();
 
@@ -23,14 +24,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
+        const { id } = await params;
         const s = supabaseAdmin();
 
         const { error } = await s
             .from("orders")
             .delete()
-            .eq("id", params.id);
+            .eq("id", id);
 
         if (error) {
             return NextResponse.json({ success: false, message: error.message }, { status: 500 });

@@ -12,7 +12,7 @@ export default async function PaymentsPage() {
         return {
             id: `#${o.id.slice(0, 4)}`,
             customer: o.player_name || "Unknown",
-            order: o.products?.title || "Unknown Product",
+            order: (o.products as any)?.title || "Unknown Product",
             amount: `$${Number(o.amount_paid || 0).toFixed(2)}`,
             method: isEdahab ? "EDAHAB" : "WAAFI",
             date: new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })

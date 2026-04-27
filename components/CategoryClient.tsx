@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import ImageUpload from "@/components/ImageUpload";
 import {
     ShoppingCart, Gamepad2, User, Phone,
     AlertTriangle, ArrowRight, ArrowLeft, X, ChevronRight
@@ -28,11 +29,12 @@ export default function CategoryClient({ cat, products }: { cat: any; products: 
     const [phone, setPhone] = useState("");
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("");
+    const [phonePopup, setPhonePopup] = useState(false);
 
     /* ---------- helpers ---------- */
     const openModal = (p: any, forceIdStep = false) => {
         setSelectedProduct(p);
-        
+
         if (!forceIdStep && savedPlayerId && savedPlayerId.trim() !== "") {
             setPlayerId(savedPlayerId);
             setStep("checkout");
@@ -40,7 +42,7 @@ export default function CategoryClient({ cat, products }: { cat: any; products: 
             setStep("id");
             setPlayerId(savedPlayerId || "");
         }
-        
+
         // We only clear playerName if we don't have a saved one, or if we force id step
         if (!savedPlayerId || forceIdStep) {
             setPlayerName(savedPlayerName || "");
@@ -51,6 +53,7 @@ export default function CategoryClient({ cat, products }: { cat: any; products: 
         setSelectedPayment(null);
         setPhone("");
         setMessage("");
+        setPhonePopup(false);
     };
 
     const closeModal = () => setSelectedProduct(null);
@@ -91,13 +94,20 @@ export default function CategoryClient({ cat, products }: { cat: any; products: 
     };
 
     const handlePayment = async () => {
-        if (!phone || phone.length < 9) { setMessage("❌ Fadlan geli Number sax ah."); return; }
+        if (!selectedPayment) {
+            setMessage("❌ Fadlan dooro payment method.");
+            return;
+        }
+
+        if (!phone || phone.length < 9) {
+            setMessage("❌ Fadlan geli Number sax ah.");
+            return;
+        }
 
         setLoading(true);
         setMessage("Payment request ayaa telefoonkaaga loo diray, fadlan hubi...");
 
         try {
-            // 1. Create Pending Order
             const pendingRes = await fetch("/api/orders/create-pending", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -110,23 +120,27 @@ export default function CategoryClient({ cat, products }: { cat: any; products: 
                     amount_paid: selectedProduct.sell_price,
                 }),
             });
+
             const pendingData = await pendingRes.json();
+
             if (!pendingData.success) {
                 setMessage(pendingData.message || "❌ Order lama abuurin.");
-                setLoading(false);
                 return;
             }
 
             const orderId = pendingData.order.id;
 
-            // 2. Call WaafiPay (eDahab uses same WaafiPay API for now)
             if (selectedPayment === "card") {
                 setMessage("⚠️ Visa/MasterCard waqti dhaw ayaa lagu soo darayaa.");
-                setLoading(false);
                 return;
             }
 
-            const paymentRes = await fetch("/api/payments/waafi", {
+            const paymentUrl =
+                selectedPayment === "edahab"
+                    ? "/api/payments/edahab"
+                    : "/api/payments/waafi";
+
+            const paymentRes = await fetch(paymentUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -136,9 +150,9 @@ export default function CategoryClient({ cat, products }: { cat: any; products: 
                     description: `${selectedProduct.title || selectedProduct.catalogue_name} - ${playerId}`,
                 }),
             });
+
             const paymentData = await paymentRes.json();
 
-            // 3. Handle response
             if (!paymentData.success || !paymentData.paid) {
                 await fetch(`/api/admin/orders/${orderId}`, {
                     method: "PATCH",
@@ -150,38 +164,43 @@ export default function CategoryClient({ cat, products }: { cat: any; products: 
                         payment_message: paymentData.message || "Payment failed",
                     }),
                 });
+
                 setMessage("❌ Payment failed ama waad cancel-gareysay. Mar kale isku day.");
-                setLoading(false);
                 return;
             }
 
-            // 4. Mark as PAID
             await fetch(`/api/admin/orders/${orderId}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     payment_status: "PAID",
                     waafi_reference: paymentData.referenceId,
-                    payment_message: "Payment success",
+                    payment_message:
+                        selectedPayment === "edahab"
+                            ? "eDahab payment success"
+                            : "Waafi payment success",
                 }),
             });
 
-            // 5. Deliver via G2Bulk
             const deliveryRes = await fetch("/api/orders/send-delivery", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ order_id: orderId }),
             });
+
             const deliveryData = await deliveryRes.json();
 
             setMessage(
                 deliveryData.success
-                    ? "✅ Waa laguugu shubay! Payment Success."
-                    : "⚠️ Lacagta waa la bixiyay, laakiin cilad ayaa dhacday shubida. Admin baa hubinaya."
+                    ? "✅ COMPLETED — UC waa laguugu shubay!"
+                    : "⚠️ Lacagta waa la bixiyay, laakiin delivery failed. Admin baa hubinaya."
             );
 
             if (deliveryData.success) {
-                setTimeout(() => closeModal(), 3500);
+                // Redirect to success page
+                setTimeout(() => {
+                    router.push(`/order/success?order_id=${orderId}`);
+                }, 800);
             }
         } catch (err: any) {
             setMessage(err.message || "Something went wrong.");
@@ -189,7 +208,6 @@ export default function CategoryClient({ cat, products }: { cat: any; products: 
             setLoading(false);
         }
     };
-
     /* ---------- Parse Category Details ---------- */
     let descText = cat.description || "";
     let bannerImage = cat.image || "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2070&auto=format&fit=crop";
@@ -199,7 +217,7 @@ export default function CategoryClient({ cat, products }: { cat: any; products: 
             const parsed = JSON.parse(descText);
             descText = parsed.text || "";
             if (parsed.banner_image) bannerImage = parsed.banner_image;
-        } catch (e) {}
+        } catch (e) { }
     }
 
     /* ---------- render ---------- */
@@ -216,8 +234,8 @@ export default function CategoryClient({ cat, products }: { cat: any; products: 
 
                 {/* Top Bar Navigation */}
                 <div className="absolute top-4 left-4 right-4 z-10 flex justify-between items-center">
-                    <button 
-                        onClick={() => router.back()} 
+                    <button
+                        onClick={() => router.back()}
                         className="bg-white hover:bg-gray-100 text-slate-800 w-10 h-10 flex items-center justify-center rounded-full transition shadow-sm"
                     >
                         <ArrowLeft size={20} />
@@ -230,7 +248,7 @@ export default function CategoryClient({ cat, products }: { cat: any; products: 
                     <div className="text-white/80 text-[10px] md:text-xs font-black tracking-[0.2em] mb-1">TOP UP</div>
                     <h1 className="text-2xl md:text-4xl font-black text-white uppercase tracking-tight leading-tight">{cat.name}</h1>
                     <div className="mt-3 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1.5 border border-white/10 shadow-sm">
-                        <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-emerald-400"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                        <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-emerald-400"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" /></svg>
                         <span className="text-white text-[11px] font-bold">Official</span>
                     </div>
                 </div>
@@ -265,7 +283,7 @@ export default function CategoryClient({ cat, products }: { cat: any; products: 
                             </span>
                         </div>
                     </div>
-                    <button 
+                    <button
                         onClick={() => {
                             setPlayerId(savedPlayerId || "");
                             if (savedPlayerId) {
@@ -286,7 +304,7 @@ export default function CategoryClient({ cat, products }: { cat: any; products: 
             {/* ── TABS & PRODUCTS AREA (LIGHT THEME) ── */}
             <div className="bg-[#f4f7fa] rounded-t-[32px] -mt-6 relative z-20 min-h-[50vh] text-[#111827] pt-2">
                 <div className="max-w-7xl mx-auto px-4 md:px-8 py-8">
-                    
+
                     {/* PACKAGES HEADER */}
                     <div className="flex items-center justify-center mb-6">
                         <div className="h-px bg-slate-300 flex-1 max-w-[100px]"></div>
@@ -368,8 +386,8 @@ export default function CategoryClient({ cat, products }: { cat: any; products: 
                                 <div className={`w-full border-2 rounded-2xl px-4 py-4 font-bold text-sm transition
                                     ${!playerName ? "border-gray-100 bg-gray-50 text-gray-300" :
                                         playerName === "Checking..." ? "border-blue-100 bg-blue-50 text-blue-400" :
-                                        playerName === "Not Found" || playerName === "Error" ? "border-red-100 bg-red-50 text-red-500" :
-                                        "border-green-100 bg-green-50 text-green-600"}`}>
+                                            playerName === "Not Found" || playerName === "Error" ? "border-red-100 bg-red-50 text-red-500" :
+                                                "border-green-100 bg-green-50 text-green-600"}`}>
                                     {playerName || "Auto-detect"}
                                 </div>
                             </div>
@@ -397,8 +415,10 @@ export default function CategoryClient({ cat, products }: { cat: any; products: 
                     <div className="animate-[slideUp_.3s_ease-out] w-full max-w-md bg-white rounded-[2rem] flex flex-col shadow-2xl overflow-hidden max-h-[95vh]">
 
                         {/* Modal Header */}
-                        <div className="flex justify-between items-center px-6 py-5 border-b border-gray-100">
-                            <div className="w-8" />
+                        <div className="flex justify-between items-center px-6 py-5 border-b border-gray-100 shrink-0">
+                            <button onClick={() => step === "checkout" ? setStep("id") : closeModal()} className="w-8 h-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-full transition">
+                                <ArrowLeft size={16} />
+                            </button>
                             <h2 className="text-base font-black text-[#1a2b4b] uppercase tracking-widest">
                                 {step === "id" ? "Enter Player ID" : "Checkout"}
                             </h2>
@@ -465,8 +485,8 @@ export default function CategoryClient({ cat, products }: { cat: any; products: 
                                         <div className={`w-full border-2 rounded-2xl px-4 py-4 font-bold text-sm transition
                                             ${!playerName ? "border-gray-100 bg-gray-50 text-gray-300" :
                                                 playerName === "Checking..." ? "border-blue-100 bg-blue-50 text-blue-400" :
-                                                playerName === "Not Found" || playerName === "Error" ? "border-red-100 bg-red-50 text-red-500" :
-                                                "border-green-100 bg-green-50 text-green-600"}`}>
+                                                    playerName === "Not Found" || playerName === "Error" ? "border-red-100 bg-red-50 text-red-500" :
+                                                        "border-green-100 bg-green-50 text-green-600"}`}>
                                             {playerName || "Auto-detect"}
                                         </div>
                                     </div>
@@ -495,8 +515,8 @@ export default function CategoryClient({ cat, products }: { cat: any; products: 
                             ══════════════════════ */}
                             {step === "checkout" && (
                                 <div className="animate-[slideUp_.3s_ease-out]">
-                                    {/* Player info summary */}
-                                    <div className="bg-gray-50 rounded-3xl divide-y divide-gray-100 border border-gray-100 mb-6">
+                                    {/* Player info summary — TOP */}
+                                    <div className="bg-gray-50 rounded-3xl divide-y divide-gray-100 border border-gray-100 mb-5">
                                         <div className="flex items-center gap-4 p-4">
                                             <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center shrink-0">
                                                 <User size={18} />
@@ -523,9 +543,8 @@ export default function CategoryClient({ cat, products }: { cat: any; products: 
                                         <div className="space-y-3">
                                             {/* Waafi */}
                                             <button
-                                                onClick={() => setSelectedPayment("waafi")}
-                                                className={`w-full bg-white rounded-3xl p-4 flex items-center justify-between transition-all border-2 shadow-sm
-                                                    ${selectedPayment === "waafi" ? "border-blue-500 shadow-blue-100 scale-[1.02]" : "border-gray-100 hover:border-gray-200"}`}
+                                                onClick={() => { setSelectedPayment("waafi"); setPhonePopup(true); setPhone(""); setMessage(""); }}
+                                                className="w-full bg-white rounded-3xl p-4 flex items-center justify-between transition-all border-2 shadow-sm border-gray-100 hover:border-blue-500 hover:shadow-blue-100"
                                             >
                                                 <div className="flex items-center gap-4 text-left">
                                                     <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center shrink-0">
@@ -541,9 +560,8 @@ export default function CategoryClient({ cat, products }: { cat: any; products: 
 
                                             {/* eDahab */}
                                             <button
-                                                onClick={() => setSelectedPayment("edahab")}
-                                                className={`w-full bg-white rounded-3xl p-4 flex items-center justify-between transition-all border-2 shadow-sm
-                                                    ${selectedPayment === "edahab" ? "border-emerald-500 shadow-emerald-100 scale-[1.02]" : "border-gray-100 hover:border-gray-200"}`}
+                                                onClick={() => { setSelectedPayment("edahab"); setPhonePopup(true); setPhone(""); setMessage(""); }}
+                                                className="w-full bg-white rounded-3xl p-4 flex items-center justify-between transition-all border-2 shadow-sm border-gray-100 hover:border-emerald-500 hover:shadow-emerald-100"
                                             >
                                                 <div className="flex items-center gap-4 text-left">
                                                     <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center shrink-0 text-emerald-600 font-black text-[11px]">eDahab</div>
@@ -578,34 +596,6 @@ export default function CategoryClient({ cat, products }: { cat: any; products: 
                                         </div>
                                     </div>
 
-                                    {/* Phone + Pay (after gateway chosen) */}
-                                    {(selectedPayment === "waafi" || selectedPayment === "edahab") && (
-                                        <div className="animate-[slideUp_.3s_ease-out] mt-6 bg-white p-5 rounded-3xl border border-gray-100 shadow-sm">
-                                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
-                                                <Phone size={11} className="inline mr-1" />Numberka Lacag-bixinta
-                                            </label>
-                                            <input
-                                                type="text"
-                                                placeholder="Tusaale: 25261XXXXXXX"
-                                                value={phone}
-                                                onChange={e => setPhone(e.target.value)}
-                                                className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl px-4 py-4 font-black text-gray-800 outline-none focus:border-blue-500 transition mb-4"
-                                            />
-                                            {message && (
-                                                <div className={`mb-4 rounded-xl p-3 text-xs font-bold ${message.includes("❌") || message.includes("⚠️") ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"}`}>
-                                                    {message}
-                                                </div>
-                                            )}
-                                            <button
-                                                onClick={handlePayment}
-                                                disabled={loading || !phone}
-                                                className="w-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-40 shadow-lg shadow-blue-600/25"
-                                            >
-                                                {loading ? "Processing..." : "Pay Now"} <ArrowRight size={18} />
-                                            </button>
-                                        </div>
-                                    )}
-
                                     {selectedPayment === "card" && (
                                         <div className="animate-[slideUp_.3s_ease-out] mt-6 bg-gray-50 rounded-3xl p-5 text-center border border-gray-100">
                                             <div className="w-10 h-10 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-2 text-red-500">
@@ -623,6 +613,74 @@ export default function CategoryClient({ cat, products }: { cat: any; products: 
                                 </div>
                             )}
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ════════════════════════════════════════
+                PHONE NUMBER POPUP (Bottom Sheet)
+            ════════════════════════════════════════ */}
+            {phonePopup && selectedProduct && (selectedPayment === "waafi" || selectedPayment === "edahab") && (
+                <div className="fixed inset-0 z-[60] flex items-end justify-center">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        onClick={() => { setPhonePopup(false); setSelectedPayment(null); }}
+                    />
+                    {/* Sheet */}
+                    <div className="relative w-full max-w-md animate-[slideUp_.25s_ease-out] bg-white rounded-t-[2rem] shadow-2xl px-6 pt-5 pb-10">
+                        {/* Handle */}
+                        <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
+
+                        {/* Gateway badge */}
+                        <div className="flex items-center gap-3 mb-5">
+                            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-[11px] shrink-0 ${
+                                selectedPayment === "waafi" ? "bg-green-100 text-green-700" : "bg-emerald-100 text-emerald-700"
+                            }`}>
+                                {selectedPayment === "waafi" ? "Wf" : "eD"}
+                            </div>
+                            <div>
+                                <div className="font-black text-[#1a2b4b] text-sm">
+                                    {selectedPayment === "waafi" ? "EVC / ZAAD / SAHAL / JEEB" : "eDahab Payment"}
+                                </div>
+                                <div className="text-[11px] text-gray-400 font-semibold">
+                                    {selectedPayment === "waafi" ? "Fast & secure payment" : "Secure & Instant"}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Amount summary */}
+                        <div className="bg-blue-50 rounded-2xl px-4 py-3 flex items-center justify-between mb-5 border border-blue-100">
+                            <div className="text-xs font-black text-blue-700 uppercase tracking-wider">Lacagta la bixinayo</div>
+                            <div className="text-xl font-black text-blue-700">${Number(selectedProduct.sell_price || 0).toFixed(2)} <span className="text-xs opacity-60">USD</span></div>
+                        </div>
+
+                        {/* Phone input */}
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                            <Phone size={11} className="inline mr-1" />Numberka Lacag-bixinta
+                        </label>
+                        <input
+                            type="tel"
+                            placeholder="Tusaale: 25261XXXXXXX"
+                            value={phone}
+                            onChange={e => setPhone(e.target.value)}
+                            autoFocus
+                            className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl px-4 py-4 font-black text-gray-800 text-lg outline-none focus:border-blue-500 transition mb-4"
+                        />
+
+                        {message && (
+                            <div className={`mb-4 rounded-xl p-3 text-xs font-bold ${message.includes("❌") || message.includes("⚠️") ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"}`}>
+                                {message}
+                            </div>
+                        )}
+
+                        <button
+                            onClick={handlePayment}
+                            disabled={loading || !phone || phone.length < 9}
+                            className="w-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-40 shadow-lg shadow-blue-600/25 text-base"
+                        >
+                            {loading ? "Processing..." : "Pay Now"} <ArrowRight size={20} />
+                        </button>
                     </div>
                 </div>
             )}

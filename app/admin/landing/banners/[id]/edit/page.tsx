@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Save, UploadCloud } from "lucide-react";
+import ImageUpload from "@/components/ImageUpload";
 
-export default function EditBannerPage({ params }: { params: { id: string } }) {
+export default function EditBannerPage() {
+    const params = useParams();
     const router = useRouter();
-    const { id } = params;
+    const id = params.id as string;
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
@@ -119,21 +121,11 @@ export default function EditBannerPage({ params }: { params: { id: string } }) {
             <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 space-y-6">
                 
                 {/* Background Image */}
-                <div>
-                    <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-2">Background Image (Optional)</label>
-                    <div className="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:bg-gray-50 transition relative overflow-hidden">
-                        {form.image && (
-                            <img src={form.image} className="absolute inset-0 w-full h-full object-cover opacity-30" />
-                        )}
-                        <input
-                            type="text"
-                            placeholder="Enter image URL (e.g. https://...)"
-                            className="relative z-10 w-full bg-transparent border-none outline-none text-center font-bold text-sm drop-shadow-md text-gray-800"
-                            value={form.image}
-                            onChange={(e) => setForm({ ...form, image: e.target.value })}
-                        />
-                    </div>
-                </div>
+                <ImageUpload
+                    label="Background Image (Optional)"
+                    value={form.image}
+                    onChange={(url) => setForm({ ...form, image: url })}
+                />
 
                 {/* Background Colors */}
                 <div>

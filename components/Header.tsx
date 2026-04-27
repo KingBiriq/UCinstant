@@ -57,13 +57,13 @@ export default function Header() {
                 </div>
             </header>
 
-            {/* ── MOBILE BOTTOM NAVIGATION (Animated White & Orange) ── */}
-            <div className="md:hidden fixed bottom-0 left-0 w-full z-50 bg-gradient-to-t from-[#f4f7fb] via-[#f4f7fb]/80 to-transparent pt-10 pb-4 px-4 pointer-events-none">
-                <nav className="bg-white rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-slate-100 flex justify-between items-center relative pointer-events-auto px-2">
+            {/* ── MOBILE BOTTOM NAVIGATION (Reverted & Simplified) ── */}
+            <div className="md:hidden fixed bottom-0 left-0 w-full z-50 bg-white border-t border-slate-100 px-4 py-2">
+                <nav className="flex justify-between items-center relative px-2">
                     {[
                         { href: '/', icon: Home, label: 'Home' },
                         { href: '/orders', icon: ShoppingBag, label: 'Orders' },
-                        { href: '#', icon: PhoneCall, label: 'Contact' },
+                        { href: '/contact', icon: PhoneCall, label: 'Contact' },
                         { href: '/profile', icon: User, label: 'Profile' },
                     ].map((item) => {
                         const isActive = pathname === item.href;
@@ -72,18 +72,18 @@ export default function Header() {
                             <Link 
                                 key={item.label}
                                 href={item.href} 
-                                className="relative flex-1 flex flex-col items-center justify-center h-16 w-full group"
+                                className="relative flex-1 flex flex-col items-center justify-center h-14 w-full group"
                             >
-                                <div className={`flex flex-col items-center justify-center transition-all duration-500 ease-out ${isActive ? '-translate-y-5' : 'translate-y-0 group-hover:-translate-y-1'}`}>
-                                    <div className={`flex items-center justify-center transition-all duration-500 ease-out ${
+                                <div className="flex flex-col items-center justify-center transition-all duration-300">
+                                    <div className={`flex items-center justify-center transition-all duration-300 ${
                                         isActive 
-                                            ? 'w-14 h-14 bg-orange-500 text-white rounded-full border-[6px] border-[#f4f7fb] shadow-[0_8px_16px_rgba(249,115,22,0.4)]' 
-                                            : 'w-10 h-10 text-slate-400 group-hover:text-orange-400'
+                                            ? 'w-12 h-12 bg-blue-500 text-white rounded-full border-[3px] border-white shadow-lg shadow-blue-400/20' 
+                                            : 'w-10 h-10 text-slate-400 group-hover:text-blue-400'
                                     }`}>
-                                        <Icon size={isActive ? 22 : 24} strokeWidth={isActive ? 2.5 : 2} />
+                                        <Icon size={isActive ? 20 : 24} strokeWidth={isActive ? 2.5 : 2} />
                                     </div>
                                 </div>
-                                <span className={`absolute bottom-2 text-[10px] font-black tracking-wide transition-all duration-500 ease-out ${isActive ? 'translate-y-0 opacity-100 text-orange-500' : 'translate-y-4 opacity-0 text-slate-400'}`}>
+                                <span className={`text-[9px] font-black tracking-wide mt-1 transition-all duration-300 ${isActive ? 'text-blue-500 opacity-100' : 'text-slate-400 opacity-0 h-0'}`}>
                                     {item.label}
                                 </span>
                             </Link>

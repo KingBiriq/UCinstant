@@ -1,13 +1,14 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import CategoryClient from "@/components/CategoryClient";
 
-export default async function Page({ params }: { params: { slug: string } }) {
+export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
+    const { slug } = await params;
     const s = supabaseAdmin();
 
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.slug);
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
     const query = isUUID 
-        ? `id.eq.${params.slug}` 
-        : `slug.eq.${params.slug},game_code.eq.${params.slug}`;
+        ? `id.eq.${slug}` 
+        : `slug.eq.${slug},game_code.eq.${slug}`;
 
     const { data: cat, error } = await s
         .from("categories")
